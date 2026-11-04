@@ -43,7 +43,20 @@ onValue(ref(db, 'challenges'), (snapshot) => {
 
 function buatPapan() {
   boardElement.innerHTML = '';
-  boardElement.style.position = 'relative'; // Penting agar bidak mengapung pas di atas papan
+  boardElement.style.position = 'relative'; 
+  
+  // Buat Lapisan Kanvas SVG untuk menggambar ular dan tangga
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.id = "svgOverlay";
+  svg.style.position = "absolute";
+  svg.style.top = "0";
+  svg.style.left = "0";
+  svg.style.width = "100%";
+  svg.style.height = "100%";
+  svg.style.pointerEvents = "none"; // Agar klik tetap tembus ke bawah
+  svg.style.zIndex = "5"; // Muncul di atas papan, tapi di bawah bidak
+  boardElement.appendChild(svg);
+
   let kotakId = 100;
   
   for (let baris = 0; baris < 10; baris++) {
@@ -58,25 +71,75 @@ function buatPapan() {
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.id = `kotak-${nomor}`;
-      
-      let teksSel = nomor;
-      if(tangga[nomor]) teksSel += `<br><span style="font-size:10px; color:green;">🪜 ke ${tangga[nomor]}</span>`;
-      if(ular[nomor]) teksSel += `<br><span style="font-size:10px; color:red;">🐍 ke ${ular[nomor]}</span>`;
-      
-      cell.innerHTML = teksSel;
+      cell.innerText = nomor; // Teks emoji lama dihapus, hanya tampilkan angka
       boardElement.appendChild(cell);
     });
   }
 
-  // Masukkan bidak ke dalam papan
   boardElement.appendChild(bidakP1);
   boardElement.appendChild(bidakP2);
   
-  // Tunggu sejenak agar browser selesai merender HTML, lalu letakkan pion
-  setTimeout(renderPemain, 100);
+  // Tunggu DOM selesai dirender untuk mengambil koordinat
+  setTimeout(() => {
+    renderPemain();
+    gambarGarisUlarTangga();
+  }, 100);
 }
 
-// Menghitung koordinat Top dan Left kotak untuk menggeser bidak secara smooth
+// FUNGSI BARU: Menggambar garis visual penghubung
+function gambarGarisUlarTangga() {
+  const svg = document.getElementById('svgOverlay');
+  if(!svg) return;
+  svg.innerHTML = ''; // Bersihkan garis lama jika di-resize
+
+  // Fungsi pembantu untuk mengambil koordinat tengah sebuah kotak
+  function getPusatKotak(nomor) {
+    const kotak = document.getElementById(`kotak-${nomor}`);
+    if (!kotak) return null;
+    return {
+      x: kotak.offsetLeft + (kotak.offsetWidth / 2),
+      y: kotak.offsetTop + (kotak.offsetHeight / 2)
+    };
+  }
+
+  // 1. Gambar Visual Tangga (Garis lurus hijau putus-putus)
+  for (const [awal, akhir] of Object.entries(tangga)) {
+    const p1 = getPusatKotak(awal);
+    const p2 = getPusatKotak(akhir);
+    if(p1 && p2) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", p1.x);
+      line.setAttribute("y1", p1.y);
+      line.setAttribute("x2", p2.x);
+      line.setAttribute("y2", p2.y);
+      line.setAttribute("stroke", "rgba(76, 175, 80, 0.7)"); // Hijau transparan agar angka di bawahnya masih terbaca
+      line.setAttribute("stroke-width", "12");
+      line.setAttribute("stroke-dasharray", "10, 8"); // Efek anak tangga
+      svg.appendChild(line);
+    }
+  }
+
+  // 2. Gambar Visual Ular (Garis melengkung merah tebal)
+  for (const [awal, akhir] of Object.entries(ular)) {
+    const p1 = getPusatKotak(awal);
+    const p2 = getPusatKotak(akhir);
+    if(p1 && p2) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      
+      // Hitung titik tengah dan geser untuk membuat kurva lengkung seperti ular
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+      const d = `M ${p1.x} ${p1.y} Q ${midX + 50} ${midY - 50} ${p2.x} ${p2.y}`;
+      
+      path.setAttribute("d", d);
+      path.setAttribute("stroke", "rgba(244, 67, 54, 0.7)"); // Merah transparan
+      path.setAttribute("stroke-width", "12");
+      path.setAttribute("fill", "none");
+      svg.appendChild(path);
+    }
+  }
+}
+
 function renderPemain() {
   const k1 = document.getElementById(`kotak-${p1Pos}`);
   if(k1) {
@@ -86,40 +149,37 @@ function renderPemain() {
 
   const k2 = document.getElementById(`kotak-${p2Pos}`);
   if(k2) {
-    // P2 diletakkan agak geser ke bawah kanan agar tidak tertumpuk sepenuhnya dengan P1
     bidakP2.style.top = k2.offsetTop + (k2.offsetHeight * 0.4) + 'px';
     bidakP2.style.left = k2.offsetLeft + (k2.offsetWidth * 0.4) + 'px';
   }
 }
 
-// Render ulang posisi saat ukuran layar berubah (misal HP diputar)
-window.addEventListener('resize', renderPemain);
+// Render ulang garis dan pion saat ukuran layar HP diputar/berubah
+window.addEventListener('resize', () => {
+  renderPemain();
+  gambarGarisUlarTangga();
+});
 
-// Logika Kocok Dadu dengan Animasi Putar
 btnKocok.addEventListener('click', () => {
   btnKocok.disabled = true;
-  angkaDaduEl.classList.add('shake-anim'); // Mulai getar
+  angkaDaduEl.classList.add('shake-anim');
 
   let counter = 0;
-  // Ganti angka dengan cepat selama 10 kali
   const intervalKocok = setInterval(() => {
     angkaDaduEl.innerText = Math.floor(Math.random() * 6) + 1;
     counter++;
     
     if (counter > 10) {
-      clearInterval(intervalKocok); // Berhenti mengocok
-      angkaDaduEl.classList.remove('shake-anim'); // Stop getar
+      clearInterval(intervalKocok);
+      angkaDaduEl.classList.remove('shake-anim');
       
-      // Hasil final
       const daduFinal = Math.floor(Math.random() * 6) + 1;
       angkaDaduEl.innerText = daduFinal;
-      
       jalankanBidak(daduFinal);
     }
-  }, 80); // interval perubahan angka (ms)
+  }, 80);
 });
 
-// Memindahkan bidak satu per satu agar terlihat berjalan
 function jalankanBidak(langkah) {
   let sisaLangkah = langkah;
   
@@ -132,9 +192,9 @@ function jalankanBidak(langkah) {
       sisaLangkah--;
     } else {
       clearInterval(timerJalan);
-      cekUlarTangga(); // Setelah selesai melangkah, baru cek posisi
+      cekUlarTangga();
     }
-  }, 300); // 300ms per kotak, pas dengan waktu transisi di CSS
+  }, 300);
 }
 
 function cekUlarTangga() {
@@ -151,14 +211,12 @@ function cekUlarTangga() {
   }
 
   if (posisiAkhir !== posisiSekarang) {
-    angkaDaduEl.innerText += ` (${adaPesan})`; // Beri tahu di layar dadu
+    angkaDaduEl.innerText += ` (${adaPesan})`;
     if (giliran === 1) p1Pos = posisiAkhir;
     else p2Pos = posisiAkhir;
     
-    // Tunggu sedikit sebelum luncuran dramatis ular/tangga
     setTimeout(() => {
       renderPemain();
-      // Setelah meluncur, tunggu slider selesai lalu cek challenge
       setTimeout(() => cekChallenge(posisiAkhir), 400); 
     }, 300);
   } else {
@@ -195,5 +253,4 @@ btnTutupModal.addEventListener('click', () => {
   }
 });
 
-// Mulai menggambar saat file dimuat
 buatPapan();
