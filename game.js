@@ -14,14 +14,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// Data Permainan
+let boardSize = 10;
+let totalKotak = 100;
+let tangga = {};
+let ular = {};
+
 let p1Pos = 1;
 let p2Pos = 1;
 let giliran = 1; 
 let listChallenge = {};
-
-const tangga = { 4: 14, 9: 31, 20: 38, 28: 84, 40: 59, 51: 67, 63: 81, 71: 91 };
-const ular = { 17: 7, 54: 34, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 99: 78 };
 
 const boardElement = document.getElementById('board');
 const btnKocok = document.getElementById('btnKocok');
@@ -31,110 +32,142 @@ const modal = document.getElementById('challengeModal');
 const teksTantangan = document.getElementById('teksTantangan');
 const btnTutupModal = document.getElementById('btnTutupModal');
 
-// Bidak Permanen
-const bidakP1 = document.createElement('div');
-bidakP1.className = 'player p1';
-const bidakP2 = document.createElement('div');
-bidakP2.className = 'player p2';
+const bidakP1 = document.createElement('div'); bidakP1.className = 'player p1';
+const bidakP2 = document.createElement('div'); bidakP2.className = 'player p2';
 
-onValue(ref(db, 'challenges'), (snapshot) => {
-  listChallenge = snapshot.val() || {};
+onValue(ref(db, 'challenges'), (snapshot) => { listChallenge = snapshot.val() || {}; });
+
+// Tarik konfigurasi papan dinamis
+onValue(ref(db, 'config'), (snapshot) => {
+  const data = snapshot.val();
+  if(data) {
+    boardSize = data.boardSize || 10;
+    totalKotak = boardSize * boardSize;
+    tangga = data.tangga || {};
+    ular = data.ular || {};
+    
+    // Reset posisi pemain karena ukuran papan berubah
+    p1Pos = 1; p2Pos = 1; giliran = 1;
+    giliranText.innerText = "Pemain 1 (Merah)";
+    giliranText.style.color = "#ff3b30";
+    
+    buatPapan();
+  } else {
+    buatPapan(); // Render default 10x10 jika kosong
+  }
 });
 
 function buatPapan() {
   boardElement.innerHTML = '';
-  boardElement.style.position = 'relative'; // Penting agar bidak mengapung pas di atas papan
-  let kotakId = 100;
+  boardElement.style.position = 'relative'; 
+  // Mengubah jumlah grid di CSS secara dinamis
+  boardElement.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`; 
   
-  for (let baris = 0; baris < 10; baris++) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.id = "svgOverlay";
+  svg.style.position = "absolute"; svg.style.top = "0"; svg.style.left = "0";
+  svg.style.width = "100%"; svg.style.height = "100%";
+  svg.style.pointerEvents = "none"; svg.style.zIndex = "5"; 
+  boardElement.appendChild(svg);
+
+  let kotakId = totalKotak;
+  
+  for (let baris = 0; baris < boardSize; baris++) {
     let barisIni = [];
-    for (let kolom = 0; kolom < 10; kolom++) {
+    for (let kolom = 0; kolom < boardSize; kolom++) {
       barisIni.push(kotakId);
       kotakId--;
     }
-    if (baris % 2 !== 0) barisIni.reverse();
+    // Zig-zag harus memperhitungkan ganjil/genap dari baris terbawah agar angka 1 selalu di kiri
+    if ((boardSize - 1 - baris) % 2 === 0) barisIni.reverse();
     
     barisIni.forEach(nomor => {
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.id = `kotak-${nomor}`;
-      
-      let teksSel = nomor;
-      if(tangga[nomor]) teksSel += `<br><span style="font-size:10px; color:green;">🪜 ke ${tangga[nomor]}</span>`;
-      if(ular[nomor]) teksSel += `<br><span style="font-size:10px; color:red;">🐍 ke ${ular[nomor]}</span>`;
-      
-      cell.innerHTML = teksSel;
+      cell.innerText = nomor; 
       boardElement.appendChild(cell);
     });
   }
 
-  // Masukkan bidak ke dalam papan
   boardElement.appendChild(bidakP1);
   boardElement.appendChild(bidakP2);
   
-  // Tunggu sejenak agar browser selesai merender HTML, lalu letakkan pion
-  setTimeout(renderPemain, 100);
+  setTimeout(() => { renderPemain(); gambarGarisUlarTangga(); }, 100);
 }
 
-// Menghitung koordinat Top dan Left kotak untuk menggeser bidak secara smooth
+function gambarGarisUlarTangga() {
+  const svg = document.getElementById('svgOverlay');
+  if(!svg) return;
+  svg.innerHTML = ''; 
+
+  function getPusatKotak(nomor) {
+    const kotak = document.getElementById(`kotak-${nomor}`);
+    if (!kotak) return null;
+    return { x: kotak.offsetLeft + (kotak.offsetWidth / 2), y: kotak.offsetTop + (kotak.offsetHeight / 2) };
+  }
+
+  for (const [awal, akhir] of Object.entries(tangga)) {
+    const p1 = getPusatKotak(awal); const p2 = getPusatKotak(akhir);
+    if(p1 && p2) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", p1.x); line.setAttribute("y1", p1.y); line.setAttribute("x2", p2.x); line.setAttribute("y2", p2.y);
+      line.setAttribute("stroke", "rgba(76, 175, 80, 0.7)"); line.setAttribute("stroke-width", "12"); line.setAttribute("stroke-dasharray", "10, 8");
+      svg.appendChild(line);
+    }
+  }
+
+  for (const [awal, akhir] of Object.entries(ular)) {
+    const p1 = getPusatKotak(awal); const p2 = getPusatKotak(akhir);
+    if(p1 && p2) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const midX = (p1.x + p2.x) / 2; const midY = (p1.y + p2.y) / 2;
+      path.setAttribute("d", `M ${p1.x} ${p1.y} Q ${midX + 50} ${midY - 50} ${p2.x} ${p2.y}`);
+      path.setAttribute("stroke", "rgba(244, 67, 54, 0.7)"); path.setAttribute("stroke-width", "12"); path.setAttribute("fill", "none");
+      svg.appendChild(path);
+    }
+  }
+}
+
 function renderPemain() {
   const k1 = document.getElementById(`kotak-${p1Pos}`);
-  if(k1) {
-    bidakP1.style.top = k1.offsetTop + 4 + 'px';
-    bidakP1.style.left = k1.offsetLeft + 4 + 'px';
-  }
-
+  if(k1) { bidakP1.style.top = k1.offsetTop + 4 + 'px'; bidakP1.style.left = k1.offsetLeft + 4 + 'px'; }
   const k2 = document.getElementById(`kotak-${p2Pos}`);
-  if(k2) {
-    // P2 diletakkan agak geser ke bawah kanan agar tidak tertumpuk sepenuhnya dengan P1
-    bidakP2.style.top = k2.offsetTop + (k2.offsetHeight * 0.4) + 'px';
-    bidakP2.style.left = k2.offsetLeft + (k2.offsetWidth * 0.4) + 'px';
-  }
+  if(k2) { bidakP2.style.top = k2.offsetTop + (k2.offsetHeight * 0.4) + 'px'; bidakP2.style.left = k2.offsetLeft + (k2.offsetWidth * 0.4) + 'px'; }
 }
 
-// Render ulang posisi saat ukuran layar berubah (misal HP diputar)
-window.addEventListener('resize', renderPemain);
+window.addEventListener('resize', () => { renderPemain(); gambarGarisUlarTangga(); });
 
-// Logika Kocok Dadu dengan Animasi Putar
 btnKocok.addEventListener('click', () => {
   btnKocok.disabled = true;
-  angkaDaduEl.classList.add('shake-anim'); // Mulai getar
+  angkaDaduEl.classList.add('shake-anim');
 
   let counter = 0;
-  // Ganti angka dengan cepat selama 10 kali
   const intervalKocok = setInterval(() => {
     angkaDaduEl.innerText = Math.floor(Math.random() * 6) + 1;
     counter++;
     
     if (counter > 10) {
-      clearInterval(intervalKocok); // Berhenti mengocok
-      angkaDaduEl.classList.remove('shake-anim'); // Stop getar
-      
-      // Hasil final
+      clearInterval(intervalKocok);
+      angkaDaduEl.classList.remove('shake-anim');
       const daduFinal = Math.floor(Math.random() * 6) + 1;
       angkaDaduEl.innerText = daduFinal;
-      
       jalankanBidak(daduFinal);
     }
-  }, 80); // interval perubahan angka (ms)
+  }, 80);
 });
 
-// Memindahkan bidak satu per satu agar terlihat berjalan
 function jalankanBidak(langkah) {
   let sisaLangkah = langkah;
-  
   const timerJalan = setInterval(() => {
     if (sisaLangkah > 0) {
-      if (giliran === 1 && p1Pos < 100) p1Pos++;
-      else if (giliran === 2 && p2Pos < 100) p2Pos++;
-      
-      renderPemain();
-      sisaLangkah--;
+      if (giliran === 1 && p1Pos < totalKotak) p1Pos++;
+      else if (giliran === 2 && p2Pos < totalKotak) p2Pos++;
+      renderPemain(); sisaLangkah--;
     } else {
-      clearInterval(timerJalan);
-      cekUlarTangga(); // Setelah selesai melangkah, baru cek posisi
+      clearInterval(timerJalan); cekUlarTangga();
     }
-  }, 300); // 300ms per kotak, pas dengan waktu transisi di CSS
+  }, 300);
 }
 
 function cekUlarTangga() {
@@ -142,40 +175,32 @@ function cekUlarTangga() {
   let posisiAkhir = posisiSekarang;
   let adaPesan = '';
 
-  if (tangga[posisiSekarang]) {
-    posisiAkhir = tangga[posisiSekarang];
-    adaPesan = 'Naik Tangga! 🪜';
-  } else if (ular[posisiSekarang]) {
-    posisiAkhir = ular[posisiSekarang];
-    adaPesan = 'Digigit Ular! 🐍';
-  }
+  if (tangga[posisiSekarang]) { posisiAkhir = tangga[posisiSekarang]; adaPesan = 'Naik Tangga! 🪜'; } 
+  else if (ular[posisiSekarang]) { posisiAkhir = ular[posisiSekarang]; adaPesan = 'Digigit Ular! 🐍'; }
 
   if (posisiAkhir !== posisiSekarang) {
-    angkaDaduEl.innerText += ` (${adaPesan})`; // Beri tahu di layar dadu
-    if (giliran === 1) p1Pos = posisiAkhir;
-    else p2Pos = posisiAkhir;
-    
-    // Tunggu sedikit sebelum luncuran dramatis ular/tangga
-    setTimeout(() => {
-      renderPemain();
-      // Setelah meluncur, tunggu slider selesai lalu cek challenge
-      setTimeout(() => cekChallenge(posisiAkhir), 400); 
-    }, 300);
-  } else {
-    cekChallenge(posisiSekarang);
-  }
+    angkaDaduEl.innerText += ` (${adaPesan})`;
+    if (giliran === 1) p1Pos = posisiAkhir; else p2Pos = posisiAkhir;
+    setTimeout(() => { renderPemain(); setTimeout(() => cekChallenge(posisiAkhir), 400); }, 300);
+  } else { cekChallenge(posisiSekarang); }
 }
 
 function cekChallenge(posisi) {
   if (listChallenge[posisi]) {
-    teksTantangan.innerHTML = `<strong>Tugas untuk Pemain ${giliran}:</strong><br><br>${listChallenge[posisi]}`;
-    modal.style.display = 'block';
-  } else {
-    if (posisi === 100) {
-      setTimeout(() => alert(`🎉 SELAMAT! Pemain ${giliran} Menang!`), 300);
-    } else {
+    if (!modal || !teksTantangan) {
+      alert(`⚠️ TUGAS PEMAIN ${giliran}:\n\n${listChallenge[posisi]}`);
+      lanjutGiliran(); return;
+    }
+    try {
+      teksTantangan.innerHTML = `<strong>Tugas untuk Pemain ${giliran}:</strong><br><br>${listChallenge[posisi]}`;
+      modal.style.display = 'block'; modal.style.zIndex = '99999'; 
+    } catch (error) {
+      alert(`⚠️ TUGAS PEMAIN ${giliran}:\n\n${listChallenge[posisi]}`);
       lanjutGiliran();
     }
+  } else {
+    if (posisi === totalKotak) { setTimeout(() => alert(`🎉 SELAMAT! Pemain ${giliran} Menang!`), 300); } 
+    else { lanjutGiliran(); }
   }
 }
 
@@ -188,12 +213,6 @@ function lanjutGiliran() {
 
 btnTutupModal.addEventListener('click', () => {
   modal.style.display = 'none';
-  if (p1Pos === 100 || p2Pos === 100) {
-     alert(`🎉 SELAMAT! Permainan Selesai!`);
-  } else {
-     lanjutGiliran();
-  }
+  if (p1Pos === totalKotak || p2Pos === totalKotak) { alert(`🎉 SELAMAT! Permainan Selesai!`); } 
+  else { lanjutGiliran(); }
 });
-
-// Mulai menggambar saat file dimuat
-buatPapan();
