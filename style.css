@@ -42,16 +42,30 @@ body {
 .cell { aspect-ratio: 1; background: #fff; display: flex; justify-content: center; align-items: center; position: relative; font-weight: bold; font-size: 14px; color: #555; }
 .cell:nth-child(even) { background: #f0f0f0; }
 
-/* Bidak Pemain */
-.player { width: 40%; height: 40%; border-radius: 50%; position: absolute; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 2; transition: all 0.3s; }
-.p1 { background-color: #ff3b30; top: 10%; left: 10%; }
-.p2 { background-color: #007aff; bottom: 10%; right: 10%; }
+/* Bidak Pemain (Diperbarui untuk Animasi Smooth) */
+.player { 
+  width: 20px; /* Menggunakan ukuran pasti karena sekarang mengambang di atas papan */
+  height: 20px; 
+  border-radius: 50%; 
+  position: absolute; 
+  border: 2px solid white; 
+  box-shadow: 0 2px 5px rgba(0,0,0,0.6); 
+  z-index: 10; 
+  transition: top 0.3s ease-in-out, left 0.3s ease-in-out; /* Ini kunci slide yang smooth! */
+}
+.p1 { background-color: #ff3b30; }
+.p2 { background-color: #007aff; }
 
-.btn-roll { width: 100%; font-size: 18px; padding: 15px; background-color: #ff9800; box-sizing: border-box; }
-.btn-roll:hover { background-color: #e68a00; }
-.dice-result { font-size: 24px; font-weight: bold; margin: 20px 0; text-align: center; }
-
-/* Modal Pop-up */
-.modal { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
-.modal-content { background-color: white; margin: 20% auto; padding: 30px; border-radius: 12px; width: 80%; max-width: 400px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border-top: 10px solid #ff9800; }
-.modal h2 { margin-top: 0; color: #ff9800; }
+/* Animasi Getar Dadu */
+@keyframes shake {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(-20deg); }
+  50% { transform: rotate(0deg); }
+  75% { transform: rotate(20deg); }
+  100% { transform: rotate(0deg); }
+}
+.shake-anim {
+  display: inline-block;
+  animation: shake 0.1s infinite;
+  color: #ff9800;
+}
