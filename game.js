@@ -20,29 +20,8 @@ let p2Pos = 1;
 let giliran = 1; 
 let listChallenge = {};
 
-// DATA ULAR DAN TANGGA
-// Format: { posisi_awal: posisi_akhir }
-const tangga = {
-  4: 14,
-  9: 31,
-  20: 38,
-  28: 84,
-  40: 59,
-  51: 67,
-  63: 81,
-  71: 91
-};
-
-const ular = {
-  17: 7,
-  54: 34,
-  62: 19,
-  64: 60,
-  87: 24,
-  93: 73,
-  95: 75,
-  99: 78
-};
+const tangga = { 4: 14, 9: 31, 20: 38, 28: 84, 40: 59, 51: 67, 63: 81, 71: 91 };
+const ular = { 17: 7, 54: 34, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 99: 78 };
 
 const boardElement = document.getElementById('board');
 const btnKocok = document.getElementById('btnKocok');
@@ -52,12 +31,19 @@ const modal = document.getElementById('challengeModal');
 const teksTantangan = document.getElementById('teksTantangan');
 const btnTutupModal = document.getElementById('btnTutupModal');
 
+// Bidak Permanen
+const bidakP1 = document.createElement('div');
+bidakP1.className = 'player p1';
+const bidakP2 = document.createElement('div');
+bidakP2.className = 'player p2';
+
 onValue(ref(db, 'challenges'), (snapshot) => {
   listChallenge = snapshot.val() || {};
 });
 
 function buatPapan() {
   boardElement.innerHTML = '';
+  boardElement.style.position = 'relative'; // Penting agar bidak mengapung pas di atas papan
   let kotakId = 100;
   
   for (let baris = 0; baris < 10; baris++) {
@@ -66,7 +52,6 @@ function buatPapan() {
       barisIni.push(kotakId);
       kotakId--;
     }
-    
     if (baris % 2 !== 0) barisIni.reverse();
     
     barisIni.forEach(nomor => {
@@ -74,10 +59,7 @@ function buatPapan() {
       cell.className = 'cell';
       cell.id = `kotak-${nomor}`;
       
-      // Tambahkan teks biasa
       let teksSel = nomor;
-      
-      // Tambahkan indikator visual teks kecil jika itu kepala ular atau kaki tangga
       if(tangga[nomor]) teksSel += `<br><span style="font-size:10px; color:green;">🪜 ke ${tangga[nomor]}</span>`;
       if(ular[nomor]) teksSel += `<br><span style="font-size:10px; color:red;">🐍 ke ${ular[nomor]}</span>`;
       
@@ -85,81 +67,117 @@ function buatPapan() {
       boardElement.appendChild(cell);
     });
   }
-  renderPemain();
+
+  // Masukkan bidak ke dalam papan
+  boardElement.appendChild(bidakP1);
+  boardElement.appendChild(bidakP2);
+  
+  // Tunggu sejenak agar browser selesai merender HTML, lalu letakkan pion
+  setTimeout(renderPemain, 100);
 }
 
+// Menghitung koordinat Top dan Left kotak untuk menggeser bidak secara smooth
 function renderPemain() {
-  document.querySelectorAll('.player').forEach(el => el.remove());
-  
-  const kotakP1 = document.getElementById(`kotak-${p1Pos}`);
-  if(kotakP1) {
-    const bidakP1 = document.createElement('div');
-    bidakP1.className = 'player p1';
-    kotakP1.appendChild(bidakP1);
+  const k1 = document.getElementById(`kotak-${p1Pos}`);
+  if(k1) {
+    bidakP1.style.top = k1.offsetTop + 4 + 'px';
+    bidakP1.style.left = k1.offsetLeft + 4 + 'px';
   }
 
-  const kotakP2 = document.getElementById(`kotak-${p2Pos}`);
-  if(kotakP2) {
-    const bidakP2 = document.createElement('div');
-    bidakP2.className = 'player p2';
-    kotakP2.appendChild(bidakP2);
+  const k2 = document.getElementById(`kotak-${p2Pos}`);
+  if(k2) {
+    // P2 diletakkan agak geser ke bawah kanan agar tidak tertumpuk sepenuhnya dengan P1
+    bidakP2.style.top = k2.offsetTop + (k2.offsetHeight * 0.4) + 'px';
+    bidakP2.style.left = k2.offsetLeft + (k2.offsetWidth * 0.4) + 'px';
   }
 }
 
+// Render ulang posisi saat ukuran layar berubah (misal HP diputar)
+window.addEventListener('resize', renderPemain);
+
+// Logika Kocok Dadu dengan Animasi Putar
 btnKocok.addEventListener('click', () => {
-  btnKocok.disabled = true; 
-  const dadu = Math.floor(Math.random() * 6) + 1;
-  angkaDaduEl.innerText = dadu;
+  btnKocok.disabled = true;
+  angkaDaduEl.classList.add('shake-anim'); // Mulai getar
 
-  // 1. Pindah dulu sesuai angka dadu
-  let posisiSementara = giliran === 1 ? p1Pos + dadu : p2Pos + dadu;
-  if (posisiSementara > 100) posisiSementara = 100;
-
-  if (giliran === 1) p1Pos = posisiSementara;
-  else p2Pos = posisiSementara;
-  
-  renderPemain();
-
-  // 2. Beri jeda sebentar, lalu cek apakah dia menginjak Ular atau Tangga
-  setTimeout(() => {
-    let posisiAkhir = posisiSementara;
-    let adaPesan = '';
-
-    if (tangga[posisiSementara]) {
-      posisiAkhir = tangga[posisiSementara];
-      adaPesan = 'Naik Tangga! 🪜';
-    } else if (ular[posisiSementara]) {
-      posisiAkhir = ular[posisiSementara];
-      adaPesan = 'Digigit Ular! 🐍';
-    }
-
-    // Jika menginjak ular/tangga, render ulang bidak ke posisi final
-    if (posisiAkhir !== posisiSementara) {
-      if(adaPesan) {
-         // Tampilkan notifikasi kecil di angka dadu agar pemain tahu
-         angkaDaduEl.innerText = `${dadu} (${adaPesan})`;
-      }
-      if (giliran === 1) p1Pos = posisiAkhir;
-      else p2Pos = posisiAkhir;
-      renderPemain();
-    }
-
-    // 3. Setelah posisi 100% final, baru kita periksa Challenge di posisi akhir tersebut
-    setTimeout(() => {
-      if (listChallenge[posisiAkhir]) {
-        teksTantangan.innerHTML = `<strong>Tugas untuk Pemain ${giliran}:</strong><br><br>${listChallenge[posisiAkhir]}`;
-        modal.style.display = 'block';
-      } else {
-        lanjutGiliran();
-      }
-
-      if (posisiAkhir === 100) {
-        setTimeout(() => alert(`🎉 SELAMAT! Pemain ${giliran} Menang!`), 300);
-      }
-    }, 400); // Delay untuk cek challenge
+  let counter = 0;
+  // Ganti angka dengan cepat selama 10 kali
+  const intervalKocok = setInterval(() => {
+    angkaDaduEl.innerText = Math.floor(Math.random() * 6) + 1;
+    counter++;
     
-  }, 600); // Delay sebelum meluncur naik/turun
+    if (counter > 10) {
+      clearInterval(intervalKocok); // Berhenti mengocok
+      angkaDaduEl.classList.remove('shake-anim'); // Stop getar
+      
+      // Hasil final
+      const daduFinal = Math.floor(Math.random() * 6) + 1;
+      angkaDaduEl.innerText = daduFinal;
+      
+      jalankanBidak(daduFinal);
+    }
+  }, 80); // interval perubahan angka (ms)
 });
+
+// Memindahkan bidak satu per satu agar terlihat berjalan
+function jalankanBidak(langkah) {
+  let sisaLangkah = langkah;
+  
+  const timerJalan = setInterval(() => {
+    if (sisaLangkah > 0) {
+      if (giliran === 1 && p1Pos < 100) p1Pos++;
+      else if (giliran === 2 && p2Pos < 100) p2Pos++;
+      
+      renderPemain();
+      sisaLangkah--;
+    } else {
+      clearInterval(timerJalan);
+      cekUlarTangga(); // Setelah selesai melangkah, baru cek posisi
+    }
+  }, 300); // 300ms per kotak, pas dengan waktu transisi di CSS
+}
+
+function cekUlarTangga() {
+  let posisiSekarang = giliran === 1 ? p1Pos : p2Pos;
+  let posisiAkhir = posisiSekarang;
+  let adaPesan = '';
+
+  if (tangga[posisiSekarang]) {
+    posisiAkhir = tangga[posisiSekarang];
+    adaPesan = 'Naik Tangga! 🪜';
+  } else if (ular[posisiSekarang]) {
+    posisiAkhir = ular[posisiSekarang];
+    adaPesan = 'Digigit Ular! 🐍';
+  }
+
+  if (posisiAkhir !== posisiSekarang) {
+    angkaDaduEl.innerText += ` (${adaPesan})`; // Beri tahu di layar dadu
+    if (giliran === 1) p1Pos = posisiAkhir;
+    else p2Pos = posisiAkhir;
+    
+    // Tunggu sedikit sebelum luncuran dramatis ular/tangga
+    setTimeout(() => {
+      renderPemain();
+      // Setelah meluncur, tunggu slider selesai lalu cek challenge
+      setTimeout(() => cekChallenge(posisiAkhir), 400); 
+    }, 300);
+  } else {
+    cekChallenge(posisiSekarang);
+  }
+}
+
+function cekChallenge(posisi) {
+  if (listChallenge[posisi]) {
+    teksTantangan.innerHTML = `<strong>Tugas untuk Pemain ${giliran}:</strong><br><br>${listChallenge[posisi]}`;
+    modal.style.display = 'block';
+  } else {
+    if (posisi === 100) {
+      setTimeout(() => alert(`🎉 SELAMAT! Pemain ${giliran} Menang!`), 300);
+    } else {
+      lanjutGiliran();
+    }
+  }
+}
 
 function lanjutGiliran() {
   giliran = giliran === 1 ? 2 : 1;
@@ -170,7 +188,12 @@ function lanjutGiliran() {
 
 btnTutupModal.addEventListener('click', () => {
   modal.style.display = 'none';
-  lanjutGiliran();
+  if (p1Pos === 100 || p2Pos === 100) {
+     alert(`🎉 SELAMAT! Permainan Selesai!`);
+  } else {
+     lanjutGiliran();
+  }
 });
 
+// Mulai menggambar saat file dimuat
 buatPapan();
