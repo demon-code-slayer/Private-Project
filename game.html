@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mulai Permainan</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="game-container">
+    <div class="sidebar">
+      <h2>🎲 Ular Tangga</h2>
+      <div class="turn-indicator">Giliran: <span id="giliranText" style="color:red; font-weight:bold;">Pemain 1 (Merah)</span></div>
+      <button id="btnKocok" class="btn btn-roll">Kocok Dadu</button>
+      <div class="dice-result">Angka Dadu: <span id="angkaDadu">-</span></div>
+      <br>
+      <a href="index.html" class="btn btn-secondary" style="width: 100%; box-sizing: border-box; text-align: center;">Kembali ke Menu</a>
+    </div>
+    
+    <div class="board" id="board">
+      <!-- Papan akan digenerate otomatis menggunakan JavaScript -->
+    </div>
+  </div>
+
+  <!-- Pop-up Modal untuk Challenge -->
+  <div id="challengeModal" class="modal">
+    <div class="modal-content">
+      <h2>⚠️ TANTANGAN!</h2>
+      <p id="teksTantangan">Teks tantangan muncul di sini</p>
+      <button id="btnTutupModal" class="btn">Saya Sudah Melakukannya!</button>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
