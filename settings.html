@@ -8,11 +8,23 @@
 </head>
 <body>
   <div class="container">
-    <h2>⚙️ Buat Challenge Baru</h2>
+    <h2>⚙️ Pengaturan Permainan</h2>
+    
+    <!-- PENGATURAN PAPAN BARU -->
+    <div class="form-group" style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
+      <h3 style="margin-top: 0; width: 100%;">Tentukan Ukuran Papan</h3>
+      <input type="number" id="inputUkuran" placeholder="Misal: 7 (untuk 7x7)" min="4" max="20">
+      <button id="btnSimpanPapan" class="btn btn-secondary">Buat Papan & Acak Ular Tangga</button>
+      <small style="width: 100%; color: #555;">Mengubah ukuran papan akan mereset permainan dan mengacak ular tangga baru.</small>
+    </div>
+
+    <hr style="margin: 30px 0; border: 1px solid #ddd;">
+
+    <!-- PENGATURAN CHALLENGE -->
     <div class="form-group">
-      <input type="number" id="inputKotak" placeholder="Nomor Kotak (1-100)" min="1" max="100">
+      <h3 style="margin-top: 0; width: 100%;">Buat Challenge Baru</h3>
+      <input type="number" id="inputKotak" placeholder="Nomor Kotak" min="1">
       <input type="text" id="inputTantangan" placeholder="Isi tantangan (misal: Push up 5x)">
-      <!-- Hapus onclick="simpanChallenge()", kita pindahkan logikanya ke JS -->
       <button id="btnSimpan" class="btn">Simpan</button>
     </div>
 
@@ -20,9 +32,8 @@
     <ul id="listChallenge" class="challenge-list"></ul>
     
     <br>
-    <a href="index.html" class="btn btn-secondary">Kembali ke Menu</a>
+    <a href="index.html" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box;">Kembali ke Menu</a>
   </div>
-  <!-- WAJIB: tambahkan type="module" agar bisa import Firebase -->
   <script type="module" src="settings.js"></script>
 </body>
 </html>
