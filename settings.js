@@ -1,8 +1,6 @@
-// Import Firebase langsung dari CDN Google
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-// Konfigurasi Anda
 const firebaseConfig = {
   apiKey: "AIzaSyC6aOJjySdhTjlNqn-w7rYnzFQDj5c_q9E",
   authDomain: "ular-tangga-88ed8.firebaseapp.com",
@@ -13,62 +11,78 @@ const firebaseConfig = {
   appId: "1:321434765842:web:1df46f21e8d67da38fe6cb"
 };
 
-// Inisialisasi Firebase & Database
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// Referensi Elemen HTML
+// --- LOGIKA PENYIMPANAN CHALLENGE ---
 const btnSimpan = document.getElementById('btnSimpan');
 const listChallenge = document.getElementById('listChallenge');
 
-// FUNGSI 1: SIMPAN DATA
 btnSimpan.addEventListener('click', () => {
   const kotak = document.getElementById('inputKotak').value;
   const tantangan = document.getElementById('inputTantangan').value;
-  
-  if (!kotak || !tantangan) {
-    alert('Harap isi nomor kotak dan tantangannya!');
-    return;
-  }
-
-  // Menyimpan data ke database di path: challenges/nomor_kotak
-  set(ref(db, 'challenges/' + kotak), tantangan)
-    .then(() => {
-      // Kosongkan form jika berhasil
-      document.getElementById('inputKotak').value = '';
-      document.getElementById('inputTantangan').value = '';
-    })
-    .catch((error) => {
-      alert('Gagal menyimpan: ' + error.message);
-    });
+  if (!kotak || !tantangan) { alert('Harap isi nomor kotak dan tantangannya!'); return; }
+  set(ref(db, 'challenges/' + kotak), tantangan).then(() => {
+    document.getElementById('inputKotak').value = '';
+    document.getElementById('inputTantangan').value = '';
+  });
 });
 
-// FUNGSI 2: BACA & TAMPILKAN DATA SECARA REALTIME
-const challengesRef = ref(db, 'challenges');
-onValue(challengesRef, (snapshot) => {
+onValue(ref(db, 'challenges'), (snapshot) => {
   const data = snapshot.val();
-  listChallenge.innerHTML = ''; // Kosongkan list sebelum di-render ulang
-  
+  listChallenge.innerHTML = ''; 
   if (data) {
     for (const kotak in data) {
       const li = document.createElement('li');
-      li.innerHTML = `
-        <strong>Kotak ${kotak}:</strong> ${data[kotak]} 
-        <button class="btn-delete" data-kotak="${kotak}">Hapus</button>
-      `;
+      li.innerHTML = `<strong>Kotak ${kotak}:</strong> ${data[kotak]} <button class="btn-delete" data-kotak="${kotak}">Hapus</button>`;
       listChallenge.appendChild(li);
     }
-
-    // Pasang fungsi hapus ke setiap tombol "Hapus" yang baru dibuat
-    const deleteButtons = document.querySelectorAll('.btn-delete');
-    deleteButtons.forEach(button => {
-      button.addEventListener('click', (e) => {
-        const kotakHapus = e.target.getAttribute('data-kotak');
-        // Hapus data dari Firebase
-        remove(ref(db, 'challenges/' + kotakHapus));
-      });
+    document.querySelectorAll('.btn-delete').forEach(button => {
+      button.addEventListener('click', (e) => remove(ref(db, 'challenges/' + e.target.getAttribute('data-kotak'))));
     });
-  } else {
-    listChallenge.innerHTML = '<li>Belum ada challenge yang disimpan.</li>';
   }
+});
+
+// --- LOGIKA GENERATOR PAPAN & ULAR TANGGA ACAK ---
+const btnSimpanPapan = document.getElementById('btnSimpanPapan');
+btnSimpanPapan.addEventListener('click', () => {
+  const ukuran = parseInt(document.getElementById('inputUkuran').value);
+  if (!ukuran || ukuran < 4 || ukuran > 20) {
+    alert('Masukkan ukuran antara 4 sampai 20!'); return;
+  }
+
+  const totalKotak = ukuran * ukuran;
+  const jumlahRintangan = Math.floor(totalKotak / 10) + 1; // Skala rintangan menyesuaikan ukuran papan
+  
+  const tangga = {};
+  const ular = {};
+  const used = new Set([1, totalKotak]); // Kotak Start dan Finish tidak boleh ada ular/tangga
+
+  function getRandom(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  // Generate Tangga (Naik)
+  let tCount = 0;
+  while (tCount < jumlahRintangan) {
+    let awal = getRandom(2, totalKotak - 5);
+    let akhir = getRandom(awal + 1, totalKotak - 1);
+    if (!used.has(awal) && !used.has(akhir)) {
+      tangga[awal] = akhir; used.add(awal); used.add(akhir); tCount++;
+    }
+  }
+
+  // Generate Ular (Turun)
+  let uCount = 0;
+  while (uCount < jumlahRintangan) {
+    let awal = getRandom(6, totalKotak - 1); // Kepala
+    let akhir = getRandom(2, awal - 1); // Ekor
+    if (!used.has(awal) && !used.has(akhir)) {
+      ular[awal] = akhir; used.add(awal); used.add(akhir); uCount++;
+    }
+  }
+
+  // Simpan konfigurasi ke database
+  set(ref(db, 'config'), { boardSize: ukuran, tangga: tangga, ular: ular }).then(() => {
+    alert(`Papan ${ukuran}x${ukuran} berhasil dibuat dan rintangan telah diacak!`);
+    document.getElementById('inputUkuran').value = '';
+  });
 });
