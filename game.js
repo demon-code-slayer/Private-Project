@@ -168,23 +168,8 @@ function cekUlarTangga() {
 
 function cekChallenge(posisi) {
   if (listChallenge[posisi]) {
-    // Fallback darurat jika elemen HTML pop-up hilang atau tidak terbaca
-    if (!modal || !teksTantangan) {
-      alert(`⚠️ TUGAS PEMAIN ${giliran}:\n\n${listChallenge[posisi]}`);
-      lanjutGiliran();
-      return;
-    }
-
-    try {
-      // Paksa modal tampil dan timpa aturan CSS z-index agar selalu paling depan
-      teksTantangan.innerHTML = `<strong>Tugas untuk Pemain ${giliran}:</strong><br><br>${listChallenge[posisi]}`;
-      modal.style.display = 'block';
-      modal.style.zIndex = '99999'; 
-    } catch (error) {
-      // Jika masih ada error rendering, gunakan alert biasa agar game tidak macet
-      alert(`⚠️ TUGAS PEMAIN ${giliran}:\n\n${listChallenge[posisi]}`);
-      lanjutGiliran();
-    }
+    teksTantangan.innerHTML = `<strong>Tugas untuk Pemain ${giliran}:</strong><br><br>${listChallenge[posisi]}`;
+    modal.style.display = 'block';
   } else {
     if (posisi === 100) {
       setTimeout(() => alert(`🎉 SELAMAT! Pemain ${giliran} Menang!`), 300);
