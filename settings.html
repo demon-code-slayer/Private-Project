@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan Challenge</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>⚙️ Buat Challenge Baru</h2>
+    <div class="form-group">
+      <input type="number" id="inputKotak" placeholder="Nomor Kotak (1-100)" min="1" max="100">
+      <input type="text" id="inputTantangan" placeholder="Isi tantangan (misal: Push up 5x)">
+      <!-- Hapus onclick="simpanChallenge()", kita pindahkan logikanya ke JS -->
+      <button id="btnSimpan" class="btn">Simpan</button>
+    </div>
+
+    <h3>Daftar Challenge Aktif:</h3>
+    <ul id="listChallenge" class="challenge-list"></ul>
+    
+    <br>
+    <a href="index.html" class="btn btn-secondary">Kembali ke Menu</a>
+  </div>
+  <!-- WAJIB: tambahkan type="module" agar bisa import Firebase -->
+  <script type="module" src="settings.js"></script>
+</body>
+</html>
