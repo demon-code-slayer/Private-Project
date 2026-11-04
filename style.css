@@ -1,0 +1,36 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f4f9;
+  color: #333;
+  margin: 0;
+  padding: 20px;
+}
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.center-text { text-align: center; }
+.btn {
+  display: inline-block;
+  padding: 12px 20px;
+  background-color: #4CAF50;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  margin: 5px;
+}
+.btn:hover { background-color: #45a049; }
+.btn-secondary { background-color: #2196F3; }
+.btn-secondary:hover { background-color: #0b7dda; }
+.btn-delete { background-color: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; float: right; }
+.form-group { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.form-group input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; flex: 1; }
+.challenge-list { list-style-type: none; padding: 0; }
+.challenge-list li { background: #f9f9f9; margin-bottom: 10px; padding: 15px; border-radius: 6px; border-left: 5px solid #ff9800; }
